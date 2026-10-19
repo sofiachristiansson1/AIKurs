@@ -11,9 +11,13 @@ export const BLANKET_LEVELS = [
 
 export type BlanketLevel = (typeof BLANKET_LEVELS)[number];
 
-export type BreedType = 'coldbloodOrPony' | 'warmblood' | 'thoroughbredOrArab';
+export const BREED_TYPES = ['coldbloodOrPony', 'warmblood', 'thoroughbredOrArab'] as const;
 
-export type Housing = 'outdoor' | 'stable';
+export type BreedType = (typeof BREED_TYPES)[number];
+
+export const HOUSINGS = ['outdoor', 'stable'] as const;
+
+export type Housing = (typeof HOUSINGS)[number];
 
 export type AgeGroup = 'young' | 'adult' | 'senior';
 
@@ -37,6 +41,16 @@ export interface WeatherHour {
   readonly windSpeedMs: number;
   /** Precipitation during the hour, i.e. mm/h. */
   readonly precipitationMm: number;
+}
+
+export interface Location {
+  readonly id: number;
+  readonly name: string;
+  /** County or similar, used to tell places with the same name apart. */
+  readonly region?: string;
+  readonly country: string;
+  readonly latitude: number;
+  readonly longitude: number;
 }
 
 /** A non-empty run of forecast hours that a recommendation is based on. */
