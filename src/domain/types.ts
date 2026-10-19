@@ -76,3 +76,18 @@ export interface Recommendation {
   /** True when the warming adjustments added up to more than the cap allows. */
   readonly warmingCapApplied: boolean;
 }
+
+/** Conditions right now. Precipitation is left out: Open-Meteo sums it over 15 minutes here. */
+export interface CurrentWeather {
+  readonly localTime: LocalDateTime;
+  readonly temperatureC: number;
+  readonly apparentTemperatureC: number;
+  readonly windSpeedMs: number;
+}
+
+export interface Forecast {
+  /** Current local time at the location, from the weather service rather than the device clock. */
+  readonly nowLocal: LocalDateTime;
+  readonly current: CurrentWeather;
+  readonly hours: readonly WeatherHour[];
+}
