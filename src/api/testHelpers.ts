@@ -40,3 +40,23 @@ export function requestedUrl(fetchMock: FetchMock): URL {
   }
   return url;
 }
+
+/** In-memory stand-in for localStorage. */
+export function createMemoryStorage(initial: Record<string, string> = {}) {
+  const items = new Map(Object.entries(initial));
+  return {
+    getItem: (key: string) => items.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      items.set(key, value);
+    },
+    items,
+  };
+}
+
+/** A storage that throws on every call, like a browser with site data blocked. */
+export function createBrokenStorage() {
+  const fail = (): never => {
+    throw new DOMException('The operation is insecure.', 'SecurityError');
+  };
+  return { getItem: fail, setItem: fail };
+}
