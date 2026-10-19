@@ -11,9 +11,13 @@ export const BLANKET_LEVELS = [
 
 export type BlanketLevel = (typeof BLANKET_LEVELS)[number];
 
-export type BreedType = 'coldbloodOrPony' | 'warmblood' | 'thoroughbredOrArab';
+export const BREED_TYPES = ['coldbloodOrPony', 'warmblood', 'thoroughbredOrArab'] as const;
 
-export type Housing = 'outdoor' | 'stable';
+export type BreedType = (typeof BREED_TYPES)[number];
+
+export const HOUSINGS = ['outdoor', 'stable'] as const;
+
+export type Housing = (typeof HOUSINGS)[number];
 
 export type AgeGroup = 'young' | 'adult' | 'senior';
 
@@ -39,6 +43,16 @@ export interface WeatherHour {
   readonly precipitationMm: number;
 }
 
+export interface Location {
+  readonly id: number;
+  readonly name: string;
+  /** County or similar, used to tell places with the same name apart. */
+  readonly region?: string;
+  readonly country: string;
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
 /** A non-empty run of forecast hours that a recommendation is based on. */
 export type WeatherPeriod = readonly [WeatherHour, ...WeatherHour[]];
 
@@ -61,4 +75,19 @@ export interface Recommendation {
   readonly adjustments: readonly Adjustment[];
   /** True when the warming adjustments added up to more than the cap allows. */
   readonly warmingCapApplied: boolean;
+}
+
+/** Conditions right now. Precipitation is left out: Open-Meteo sums it over 15 minutes here. */
+export interface CurrentWeather {
+  readonly localTime: LocalDateTime;
+  readonly temperatureC: number;
+  readonly apparentTemperatureC: number;
+  readonly windSpeedMs: number;
+}
+
+export interface Forecast {
+  /** Current local time at the location, from the weather service rather than the device clock. */
+  readonly nowLocal: LocalDateTime;
+  readonly current: CurrentWeather;
+  readonly hours: readonly WeatherHour[];
 }
