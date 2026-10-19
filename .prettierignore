@@ -1,0 +1,6 @@
+dist
+coverage
+package-lock.json
+# Hand-written docs are kept as authored
+CLAUDE.md
+README.md
