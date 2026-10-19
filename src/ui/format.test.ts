@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   formatClockTime,
+  formatLocation,
   formatPrecipitation,
   formatSteps,
   formatTemperature,
@@ -22,5 +23,12 @@ describe('format', () => {
 
   it('shows the clock time', () => {
     expect(formatClockTime('2026-10-19T22:15')).toBe('kl. 22:15');
+  });
+});
+
+describe('formatLocation', () => {
+  it('adds the county when known', () => {
+    expect(formatLocation({ name: 'Uppsala', region: 'Örebro län' })).toBe('Uppsala, Örebro län');
+    expect(formatLocation({ name: 'Visby' })).toBe('Visby');
   });
 });

@@ -20,3 +20,8 @@ export function formatSteps(steps: number): string {
 export function formatClockTime(localTime: string): string {
   return `kl. ${localTime.slice(11, 16)}`;
 }
+
+/** 'Uppsala, Uppsala län' so places with the same name can be told apart. */
+export function formatLocation(location: { name: string; region?: string }): string {
+  return location.region === undefined ? location.name : `${location.name}, ${location.region}`;
+}
