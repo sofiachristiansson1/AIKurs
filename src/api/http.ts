@@ -1,4 +1,4 @@
-import { err, ok, type ApiError, type Result } from './result';
+import { err, ok, reportUnexpected, type ApiError, type Result } from './result';
 import { asNonEmptyString, isRecord } from './validation';
 
 export const REQUEST_TIMEOUT_MS = 10_000;
@@ -24,8 +24,8 @@ export async function getJson(
       return err({ kind: 'serviceError', status: response.status, reason: readReason(body) });
     }
     return body === undefined ? err({ kind: 'invalidResponse' }) : ok(body);
-  } catch {
-    return err(classifyFailure(timeoutSignal, options.signal));
+  } catch (error) {
+    return err(classifyFailure(error, timeoutSignal, options.signal));
   }
 }
 
@@ -45,9 +45,20 @@ function readReason(body: unknown): string | undefined {
   return isRecord(body) ? asNonEmptyString(body.reason) : undefined;
 }
 
-function classifyFailure(timeoutSignal: AbortSignal, callerSignal?: AbortSignal): ApiError {
+function classifyFailure(
+  error: unknown,
+  timeoutSignal: AbortSignal,
+  callerSignal?: AbortSignal,
+): ApiError {
   if (callerSignal?.aborted === true) {
     return { kind: 'aborted' };
   }
-  return { kind: 'network', timedOut: timeoutSignal.aborted };
+  if (timeoutSignal.aborted) {
+    return { kind: 'network', timedOut: true };
+  }
+  // fetch rejects with a TypeError when the network fails. Anything else is a bug.
+  if (error instanceof TypeError) {
+    return { kind: 'network', timedOut: false };
+  }
+  return reportUnexpected(error);
 }

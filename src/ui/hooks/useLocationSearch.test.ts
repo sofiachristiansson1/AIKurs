@@ -2,8 +2,11 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { uppsalaSearchResponse } from '../../api/fixtures/geocoding';
+import { searchLocations } from '../../api/geocoding';
 import { jsonResponse, stubFetch, stubFetchJson } from '../../api/testHelpers';
 import { useLocationSearch } from './useLocationSearch';
+
+vi.mock('../../api/geocoding', { spy: true });
 
 const lundResponse = {
   results: [{ id: 2, name: 'Lund', country: 'Sverige', latitude: 55.7, longitude: 13.19 }],
@@ -12,6 +15,7 @@ const lundResponse = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('useLocationSearch', () => {
@@ -42,6 +46,18 @@ describe('useLocationSearch', () => {
       status: 'error',
       query: 'Xqzzy',
       error: { kind: 'locationNotFound' },
+    });
+  });
+
+  it('shows an error instead of searching forever when the search throws unexpectedly', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.mocked(searchLocations).mockRejectedValueOnce(new Error('bug in parsing'));
+    const { result } = renderHook(() => useLocationSearch(vi.fn()));
+    await act(() => result.current.search('Lund'));
+    expect(result.current.state).toEqual({
+      status: 'error',
+      query: 'Lund',
+      error: { kind: 'unexpected' },
     });
   });
 

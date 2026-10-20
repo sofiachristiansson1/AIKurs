@@ -6,6 +6,7 @@ const url = new URL('https://example.test/data');
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('getJson', () => {
@@ -45,6 +46,13 @@ describe('getJson', () => {
       ok: false,
       error: { kind: 'network', timedOut: false },
     });
+  });
+
+  it('returns unexpected, not a network error, when something other than the network fails', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    stubFetch(() => Promise.reject(new Error('bug in the app')));
+    expect(await getJson(url)).toEqual({ ok: false, error: { kind: 'unexpected' } });
+    expect(consoleError).toHaveBeenCalledTimes(1);
   });
 
   it('returns a timed-out network error when the server does not answer in time', async () => {

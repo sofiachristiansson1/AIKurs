@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { fetchForecast } from '../../api/forecast';
-import type { ApiError, Result } from '../../api/result';
+import { catchUnexpected, type ApiError, type Result } from '../../api/result';
 import type { Forecast, Location } from '../../domain/types';
 
 export type ForecastState =
@@ -25,7 +25,9 @@ export function useForecast(location: Location | undefined) {
       return;
     }
     const controller = new AbortController();
-    void fetchForecast(location, { signal: controller.signal }).then((result) => {
+    const request = catchUnexpected(fetchForecast(location, { signal: controller.signal }));
+    // Never rejects: catchUnexpected turns every failure into a result.
+    void request.then((result) => {
       if (!controller.signal.aborted) {
         setLoaded({ key, result });
       }

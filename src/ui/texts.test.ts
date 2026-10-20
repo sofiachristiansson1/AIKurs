@@ -23,6 +23,7 @@ describe('errorMessage', () => {
     { kind: 'serviceError', status: 500, reason: undefined },
     { kind: 'invalidResponse' },
     { kind: 'storageUnavailable' },
+    { kind: 'unexpected' },
   ];
 
   it.each(shownErrors)('has a message for %j', (error) => {
