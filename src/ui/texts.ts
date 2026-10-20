@@ -1,3 +1,4 @@
+import { MAX_QUERY_LENGTH } from '../api/geocoding';
 import { REQUEST_TIMEOUT_MS } from '../api/http';
 import type { ApiError } from '../api/result';
 import { ADJUSTMENT_RULES, NIGHT_WINDOW } from '../domain/blanketRules';
@@ -79,6 +80,8 @@ export function errorMessage(error: ApiError, query = ''): string | undefined {
   switch (error.kind) {
     case 'emptyQuery':
       return 'Skriv minst två bokstäver.';
+    case 'queryTooLong':
+      return `Skriv högst ${MAX_QUERY_LENGTH} tecken.`;
     case 'locationNotFound':
       return `Hittade ingen ort som heter "${query.trim()}" i Sverige.`;
     case 'network':

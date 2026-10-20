@@ -56,6 +56,7 @@ describe('lastLocationStore', () => {
     ['latitude as text', { ...uppsala, latitude: '59.8' }],
     ['latitude out of range', { ...uppsala, latitude: 91 }],
     ['longitude out of range', { ...uppsala, longitude: -181 }],
+    ['name longer than 200 characters', { ...uppsala, name: 'a'.repeat(201) }],
   ])('returns null for %s', (_description, stored) => {
     expect(storeWith(JSON.stringify(stored)).load()).toEqual({ ok: true, value: null });
   });

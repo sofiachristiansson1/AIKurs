@@ -1,5 +1,5 @@
 import type { Location } from '../domain/types';
-import { asFiniteNumber, asNonEmptyString, isRecord } from './validation';
+import { asFiniteNumber, asLatitude, asLongitude, asPlaceText, isRecord } from './validation';
 import { createJsonStore, type JsonStore, type KeyValueStorage } from './webStorage';
 
 /** Bump the version if the stored shape changes; old data is then ignored. */
@@ -14,21 +14,19 @@ export function parseStoredLocation(value: unknown): Location | undefined {
     return undefined;
   }
   const id = asFiniteNumber(value.id);
-  const name = asNonEmptyString(value.name);
-  const country = asNonEmptyString(value.country);
-  const latitude = asFiniteNumber(value.latitude);
-  const longitude = asFiniteNumber(value.longitude);
+  const name = asPlaceText(value.name);
+  const country = asPlaceText(value.country);
+  const latitude = asLatitude(value.latitude);
+  const longitude = asLongitude(value.longitude);
   if (
     id === undefined ||
     name === undefined ||
     country === undefined ||
     latitude === undefined ||
-    longitude === undefined ||
-    Math.abs(latitude) > 90 ||
-    Math.abs(longitude) > 180
+    longitude === undefined
   ) {
     return undefined;
   }
-  const region = asNonEmptyString(value.region);
+  const region = asPlaceText(value.region);
   return { id, name, country, latitude, longitude, ...(region === undefined ? {} : { region }) };
 }

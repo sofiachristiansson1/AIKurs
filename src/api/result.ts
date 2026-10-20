@@ -4,6 +4,7 @@ export type Result<T, E> =
 /** Everything that can go wrong when talking to the outside world. The UI words these in Swedish. */
 export type ApiError =
   | { readonly kind: 'emptyQuery' }
+  | { readonly kind: 'queryTooLong' }
   | { readonly kind: 'locationNotFound' }
   | { readonly kind: 'network'; readonly timedOut: boolean }
   /** The caller cancelled the request, e.g. because a newer search replaced it. Not shown to users. */

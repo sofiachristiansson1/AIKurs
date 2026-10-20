@@ -1,7 +1,13 @@
 import type { CurrentWeather, Forecast, Location, WeatherHour } from '../domain/types';
 import { getJson, type RequestOptions } from './http';
 import { err, ok, type ApiError, type Result } from './result';
-import { asArray, asFiniteNumber, asLocalDateTime, isRecord } from './validation';
+import {
+  asArray,
+  asLocalDateTime,
+  asNumberInRange,
+  isRecord,
+  type NumberRange,
+} from './validation';
 
 const FORECAST_URL = 'https://api.open-meteo.com/v1/forecast';
 /** Two days always covers the coming night, even late in the evening. */
@@ -15,6 +21,18 @@ const HOURLY_VARIABLES = {
 } as const;
 
 const CURRENT_VARIABLES = ['temperature_2m', 'apparent_temperature', 'wind_speed_10m'] as const;
+
+/**
+ * Values outside these ranges mean a broken response, not real weather. They sit beyond the
+ * world records (−89.2 °C, 56.7 °C, gusts of 113 m/s, about 305 mm in an hour) and are not
+ * blanket rules.
+ */
+const PLAUSIBLE_RANGES: Readonly<Record<keyof typeof HOURLY_VARIABLES, NumberRange>> = {
+  temperatureC: { min: -90, max: 60 },
+  apparentTemperatureC: { min: -120, max: 80 },
+  precipitationMm: { min: 0, max: 500 },
+  windSpeedMs: { min: 0, max: 120 },
+};
 
 /** Units we ask for and check in the response, so a unit mix-up can never pass silently. */
 const EXPECTED_UNITS: Readonly<Record<string, string>> = {
@@ -72,9 +90,12 @@ function parseCurrent(value: unknown): CurrentWeather | undefined {
     return undefined;
   }
   const localTime = asLocalDateTime(value.time);
-  const temperatureC = asFiniteNumber(value.temperature_2m);
-  const apparentTemperatureC = asFiniteNumber(value.apparent_temperature);
-  const windSpeedMs = asFiniteNumber(value.wind_speed_10m);
+  const temperatureC = asNumberInRange(value.temperature_2m, PLAUSIBLE_RANGES.temperatureC);
+  const apparentTemperatureC = asNumberInRange(
+    value.apparent_temperature,
+    PLAUSIBLE_RANGES.apparentTemperatureC,
+  );
+  const windSpeedMs = asNumberInRange(value.wind_speed_10m, PLAUSIBLE_RANGES.windSpeedMs);
   if (
     localTime === undefined ||
     temperatureC === undefined ||
@@ -86,7 +107,10 @@ function parseCurrent(value: unknown): CurrentWeather | undefined {
   return { localTime, temperatureC, apparentTemperatureC, windSpeedMs };
 }
 
-/** Maps the column-per-variable hourly arrays to one object per hour, skipping hours with gaps. */
+/**
+ * Maps the column-per-variable hourly arrays to one object per hour, skipping hours with gaps
+ * or implausible values.
+ */
 function parseHourly(value: unknown): WeatherHour[] | undefined {
   if (!isRecord(value)) {
     return undefined;
@@ -106,12 +130,13 @@ function toWeatherHour(
   readColumn: (variable: string) => unknown,
   index: number,
 ): WeatherHour | undefined {
-  const valueAt = (variable: string) => asFiniteNumber(asArray(readColumn(variable))?.[index]);
+  const valueAt = (field: keyof typeof HOURLY_VARIABLES) =>
+    asNumberInRange(asArray(readColumn(HOURLY_VARIABLES[field]))?.[index], PLAUSIBLE_RANGES[field]);
   const localTime = asLocalDateTime(time);
-  const temperatureC = valueAt(HOURLY_VARIABLES.temperatureC);
-  const apparentTemperatureC = valueAt(HOURLY_VARIABLES.apparentTemperatureC);
-  const precipitationMm = valueAt(HOURLY_VARIABLES.precipitationMm);
-  const windSpeedMs = valueAt(HOURLY_VARIABLES.windSpeedMs);
+  const temperatureC = valueAt('temperatureC');
+  const apparentTemperatureC = valueAt('apparentTemperatureC');
+  const precipitationMm = valueAt('precipitationMm');
+  const windSpeedMs = valueAt('windSpeedMs');
   if (
     localTime === undefined ||
     temperatureC === undefined ||

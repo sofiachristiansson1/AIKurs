@@ -1,6 +1,7 @@
 import { useId, useState } from 'react';
+import { AGE_INPUT_RANGE, isValidAge } from '../../domain/horseAge';
 import { BREED_TYPES, HOUSINGS } from '../../domain/types';
-import { AGE_INPUT_RANGE, isValidAge, type HorseDraft } from '../hooks/useHorseProfile';
+import type { HorseDraft } from '../hooks/useHorseProfile';
 import { BREED_LABELS, HOUSING_LABELS } from '../texts';
 
 interface HorseFormProps {

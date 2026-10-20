@@ -40,6 +40,9 @@ describe('horseProfileStore', () => {
 
   it.each([
     ['negative age', { ...profile, ageYears: -1 }],
+    ['age that is not whole years', { ...profile, ageYears: 3.5 }],
+    ['age above what the form allows', { ...profile, ageYears: 41 }],
+    ['absurdly large age', { ...profile, ageYears: 1e308 }],
     ['unknown breed', { ...profile, breedType: 'unicorn' }],
     ['unknown housing', { ...profile, housing: 'barn' }],
     ['clipped as text', { ...profile, clipped: 'yes' }],
@@ -48,10 +51,10 @@ describe('horseProfileStore', () => {
     expect(storeWith(JSON.stringify(stored)).load()).toEqual({ ok: true, value: null });
   });
 
-  it('accepts age 0', () => {
-    expect(storeWith(JSON.stringify({ ...profile, ageYears: 0 })).load()).toEqual({
+  it.each([0, 40])('accepts age %s', (ageYears) => {
+    expect(storeWith(JSON.stringify({ ...profile, ageYears })).load()).toEqual({
       ok: true,
-      value: { ...profile, ageYears: 0 },
+      value: { ...profile, ageYears },
     });
   });
 

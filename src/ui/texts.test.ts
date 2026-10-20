@@ -17,6 +17,7 @@ describe('blanketLabel', () => {
 describe('errorMessage', () => {
   const shownErrors: ApiError[] = [
     { kind: 'emptyQuery' },
+    { kind: 'queryTooLong' },
     { kind: 'locationNotFound' },
     { kind: 'network', timedOut: true },
     { kind: 'network', timedOut: false },
@@ -38,6 +39,10 @@ describe('errorMessage', () => {
     expect(errorMessage({ kind: 'locationNotFound' }, ' Lnud ')).toBe(
       'Hittade ingen ort som heter "Lnud" i Sverige.',
     );
+  });
+
+  it('states the maximum length for a too long query', () => {
+    expect(errorMessage({ kind: 'queryTooLong' })).toBe('Skriv högst 100 tecken.');
   });
 
   it('includes the status code for service errors', () => {

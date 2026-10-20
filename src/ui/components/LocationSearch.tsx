@@ -1,4 +1,5 @@
 import { useId, useState, type FormEvent } from 'react';
+import { MAX_QUERY_LENGTH } from '../../api/geocoding';
 import type { Location } from '../../domain/types';
 import { formatLocation } from '../format';
 import { useLocationSearch } from '../hooks/useLocationSearch';
@@ -38,6 +39,7 @@ export function LocationSearch({ selected, onSelect }: LocationSearchProps) {
             onChange={(event) => {
               setQuery(event.target.value);
             }}
+            maxLength={MAX_QUERY_LENGTH}
             autoComplete="off"
             enterKeyHint="search"
           />

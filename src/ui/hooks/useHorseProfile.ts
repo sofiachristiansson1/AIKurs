@@ -1,11 +1,9 @@
 import { useCallback, useState } from 'react';
 import { createHorseProfileStore } from '../../api/horseProfileStore';
 import type { ApiError } from '../../api/result';
+import { isValidAge } from '../../domain/horseAge';
 import type { BreedType, HorseProfile, Housing } from '../../domain/types';
 import { useStore } from './useStore';
-
-/** Allowed ages in the form. This limits input only and is not a blanket rule. */
-export const AGE_INPUT_RANGE = { min: 0, max: 40 } as const;
 
 /** What the form holds; the age may still be missing or invalid. */
 export interface HorseDraft {
@@ -21,15 +19,6 @@ export const DEFAULT_HORSE_DRAFT: HorseDraft = {
   housing: 'outdoor',
   ageYears: undefined,
 };
-
-export function isValidAge(ageYears: number | undefined): ageYears is number {
-  return (
-    ageYears !== undefined &&
-    Number.isInteger(ageYears) &&
-    ageYears >= AGE_INPUT_RANGE.min &&
-    ageYears <= AGE_INPUT_RANGE.max
-  );
-}
 
 export function toHorseProfile(draft: HorseDraft): HorseProfile | undefined {
   const { ageYears } = draft;

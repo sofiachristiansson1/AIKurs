@@ -111,6 +111,62 @@ describe('parseForecastResponse', () => {
     ]);
   });
 
+  it.each([
+    ['temperature_2m', 61],
+    ['temperature_2m', -91],
+    ['apparent_temperature', 81],
+    ['apparent_temperature', -121],
+    ['precipitation', -0.1],
+    ['precipitation', 501],
+    ['wind_speed_10m', -1],
+    ['wind_speed_10m', 121],
+  ])('skips an hour where %s is implausible (%s)', (variable, value) => {
+    const response = withChange((r) => {
+      const column = hourly(r)[variable];
+      if (column !== undefined) {
+        column[1] = value;
+      }
+    });
+    const result = parseForecastResponse(response);
+    expect(result.ok && result.value.hours.map((hour) => hour.localTime)).toEqual([
+      '2026-10-19T22:00',
+      '2026-10-20T00:00',
+    ]);
+  });
+
+  it('keeps values at the edge of the plausible ranges', () => {
+    const response = withChange((r) => {
+      hourly(r).temperature_2m = [60, -90, 2.1];
+      hourly(r).apparent_temperature = [80, -120, -2.4];
+      hourly(r).precipitation = [0, 500, 0.2];
+      hourly(r).wind_speed_10m = [0, 120, 5];
+    });
+    const result = parseForecastResponse(response);
+    expect(result.ok && result.value.hours).toHaveLength(3);
+  });
+
+  it.each([
+    ['temperature_2m', 61],
+    ['apparent_temperature', -121],
+    ['wind_speed_10m', 121],
+  ])('rejects current weather where %s is implausible (%s)', (variable, value) => {
+    const response = withChange((r) => {
+      (r.current as Record<string, unknown>)[variable] = value;
+    });
+    expect(parseForecastResponse(response)).toEqual(invalid);
+  });
+
+  it('skips an hour with an impossible clock time', () => {
+    const response = withChange((r) => {
+      hourly(r).time = ['2026-10-19T22:00', '2026-10-19T99:00', '2026-10-20T00:00'];
+    });
+    const result = parseForecastResponse(response);
+    expect(result.ok && result.value.hours.map((hour) => hour.localTime)).toEqual([
+      '2026-10-19T22:00',
+      '2026-10-20T00:00',
+    ]);
+  });
+
   it('rejects hourly lists of different lengths', () => {
     const response = withChange((r) => {
       hourly(r).precipitation = [0, 0.6];

@@ -56,6 +56,21 @@ describe('searchLocations', () => {
     },
   );
 
+  it('accepts a query of exactly the maximum length', async () => {
+    const fetchMock = stubFetchJson(uppsalaSearchResponse);
+    await searchLocations('a'.repeat(100));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns queryTooLong for a longer query without calling the service', async () => {
+    const fetchMock = stubFetchJson(uppsalaSearchResponse);
+    expect(await searchLocations('a'.repeat(101))).toEqual({
+      ok: false,
+      error: { kind: 'queryTooLong' },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('returns locationNotFound when the response has no results field', async () => {
     stubFetchJson(noMatchSearchResponse);
     expect(await searchLocations('Xqzzy')).toEqual({
@@ -81,6 +96,19 @@ describe('searchLocations', () => {
     });
     const result = await searchLocations('Lund');
     expect(result.ok && result.value.map((location) => location.id)).toEqual([2]);
+  });
+
+  it('skips matches with coordinates out of range or overly long names', async () => {
+    stubFetchJson({
+      results: [
+        { id: 1, name: 'Fel latitud', country: 'Sverige', latitude: 91, longitude: 13 },
+        { id: 2, name: 'Fel longitud', country: 'Sverige', latitude: 55, longitude: -181 },
+        { id: 3, name: 'a'.repeat(201), country: 'Sverige', latitude: 55, longitude: 13 },
+        { id: 4, name: 'Lund', country: 'Sverige', latitude: 55.7, longitude: 13.19 },
+      ],
+    });
+    const result = await searchLocations('Lund');
+    expect(result.ok && result.value.map((location) => location.id)).toEqual([4]);
   });
 
   it('returns invalidResponse when no match is usable', async () => {

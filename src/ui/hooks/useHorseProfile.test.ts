@@ -2,25 +2,12 @@
 import { act, cleanup, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HORSE_PROFILE_KEY } from '../../api/horseProfileStore';
-import { DEFAULT_HORSE_DRAFT, isValidAge, useHorseProfile } from './useHorseProfile';
+import { DEFAULT_HORSE_DRAFT, useHorseProfile } from './useHorseProfile';
 
 afterEach(() => {
   cleanup();
   localStorage.clear();
   vi.restoreAllMocks();
-});
-
-describe('isValidAge', () => {
-  it.each([
-    [undefined, false],
-    [-1, false],
-    [0, true],
-    [40, true],
-    [41, false],
-    [3.5, false],
-  ])('%s gives %s', (ageYears, expected) => {
-    expect(isValidAge(ageYears)).toBe(expected);
-  });
 });
 
 describe('useHorseProfile', () => {
