@@ -52,6 +52,8 @@ export default defineConfig([
   },
   {
     files: ['src/ui/**/*.{ts,tsx}', 'src/domain/**/*.ts'],
+    // Tests may set up and inspect fetch and storage; the layering rule is about app code.
+    ignores: ['**/*.test.{ts,tsx}'],
     rules: {
       'no-restricted-globals': ['error', ...ioGlobals],
       'no-restricted-properties': ['error', ...ioProperties],
