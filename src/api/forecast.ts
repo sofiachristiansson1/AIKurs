@@ -1,6 +1,6 @@
 import type { CurrentWeather, Forecast, Location, WeatherHour } from '../domain/types';
 import { getJson, type RequestOptions } from './http';
-import { err, ok, type ApiError, type Result } from './result';
+import { err, ok, rejectResponse, type ApiError, type Result } from './result';
 import {
   asArray,
   asLocalDateTime,
@@ -66,15 +66,26 @@ export function buildForecastUrl(location: Pick<Location, 'latitude' | 'longitud
 
 export function parseForecastResponse(body: unknown): Result<Forecast, ApiError> {
   if (!isRecord(body)) {
-    return err({ kind: 'invalidResponse' });
+    return err(rejectResponse('forecast is not an object', body));
   }
-  const unitsOk =
-    hasExpectedUnits(body.current_units, CURRENT_VARIABLES) &&
-    hasExpectedUnits(body.hourly_units, Object.values(HOURLY_VARIABLES));
-  const current = unitsOk ? parseCurrent(body.current) : undefined;
-  const hours = unitsOk ? parseHourly(body.hourly) : undefined;
-  if (current === undefined || hours === undefined || hours.length === 0) {
-    return err({ kind: 'invalidResponse' });
+  if (
+    !hasExpectedUnits(body.current_units, CURRENT_VARIABLES) ||
+    !hasExpectedUnits(body.hourly_units, Object.values(HOURLY_VARIABLES))
+  ) {
+    return err(
+      rejectResponse('forecast has unexpected units', {
+        current_units: body.current_units,
+        hourly_units: body.hourly_units,
+      }),
+    );
+  }
+  const current = parseCurrent(body.current);
+  if (current === undefined) {
+    return err(rejectResponse('current weather is missing or implausible', body.current));
+  }
+  const hours = parseHourly(body.hourly);
+  if (hours === undefined || hours.length === 0) {
+    return err(rejectResponse('hourly forecast is malformed or has no complete hour'));
   }
   return ok({ nowLocal: current.localTime, current, hours });
 }

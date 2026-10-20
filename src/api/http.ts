@@ -1,4 +1,4 @@
-import { err, ok, reportUnexpected, type ApiError, type Result } from './result';
+import { err, ok, rejectResponse, reportUnexpected, type ApiError, type Result } from './result';
 import { asNonEmptyString, isRecord } from './validation';
 
 export const REQUEST_TIMEOUT_MS = 10_000;
@@ -14,19 +14,61 @@ export async function getJson(
   url: URL,
   options: RequestOptions = {},
 ): Promise<Result<unknown, ApiError>> {
-  const timeoutSignal = AbortSignal.timeout(options.timeoutMs ?? REQUEST_TIMEOUT_MS);
-  const signal =
-    options.signal === undefined ? timeoutSignal : AbortSignal.any([options.signal, timeoutSignal]);
+  const request = createRequestSignal(options.timeoutMs ?? REQUEST_TIMEOUT_MS, options.signal);
   try {
-    const response = await fetch(url, { signal });
+    const response = await fetch(url, { signal: request.signal });
     const body = await readJsonBody(response);
     if (!response.ok) {
-      return err({ kind: 'serviceError', status: response.status, reason: readReason(body) });
+      const reason = readReason(body);
+      // The reason is in English and meant for developers, so it is logged, not shown.
+      console.warn(`Täckesguiden: ${url.host} answered ${String(response.status)}`, reason);
+      return err({ kind: 'serviceError', status: response.status, reason });
     }
-    return body === undefined ? err({ kind: 'invalidResponse' }) : ok(body);
+    return body === undefined
+      ? err(rejectResponse(`${url.host} sent a body that is not JSON`))
+      : ok(body);
   } catch (error) {
-    return err(classifyFailure(error, timeoutSignal, options.signal));
+    return err(classifyFailure(error, request.hasTimedOut(), options.signal));
+  } finally {
+    request.dispose();
   }
+}
+
+interface RequestSignal {
+  readonly signal: AbortSignal;
+  readonly hasTimedOut: () => boolean;
+  /** Stops the timer and stops listening to the caller's signal. */
+  readonly dispose: () => void;
+}
+
+/**
+ * Combines the caller's signal with a timeout. Built from AbortController and setTimeout
+ * because AbortSignal.any and AbortSignal.timeout are missing in older browsers, such as
+ * Safari before 17.4, where they would make every request fail.
+ */
+function createRequestSignal(timeoutMs: number, callerSignal?: AbortSignal): RequestSignal {
+  const controller = new AbortController();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  const abortFromCaller = () => {
+    controller.abort();
+  };
+  if (callerSignal?.aborted === true) {
+    controller.abort();
+  } else {
+    callerSignal?.addEventListener('abort', abortFromCaller, { once: true });
+  }
+  return {
+    signal: controller.signal,
+    hasTimedOut: () => timedOut,
+    dispose: () => {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener('abort', abortFromCaller);
+    },
+  };
 }
 
 async function readJsonBody(response: Response): Promise<unknown> {
@@ -45,15 +87,11 @@ function readReason(body: unknown): string | undefined {
   return isRecord(body) ? asNonEmptyString(body.reason) : undefined;
 }
 
-function classifyFailure(
-  error: unknown,
-  timeoutSignal: AbortSignal,
-  callerSignal?: AbortSignal,
-): ApiError {
+function classifyFailure(error: unknown, timedOut: boolean, callerSignal?: AbortSignal): ApiError {
   if (callerSignal?.aborted === true) {
     return { kind: 'aborted' };
   }
-  if (timeoutSignal.aborted) {
+  if (timedOut) {
     return { kind: 'network', timedOut: true };
   }
   // fetch rejects with a TypeError when the network fails. Anything else is a bug.

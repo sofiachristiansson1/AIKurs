@@ -25,9 +25,14 @@ export function stubHangingFetch(): FetchMock {
   return stubFetch(
     (_url, init) =>
       new Promise<Response>((_resolve, reject) => {
-        init?.signal?.addEventListener('abort', () => {
+        const abort = () => {
           reject(new DOMException('The operation was aborted.', 'AbortError'));
-        });
+        };
+        // Like the real fetch, reject at once if the signal is already aborted.
+        if (init?.signal?.aborted === true) {
+          abort();
+        }
+        init?.signal?.addEventListener('abort', abort);
       }),
   );
 }

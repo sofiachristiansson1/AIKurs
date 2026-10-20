@@ -1,12 +1,18 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fetchForecast, parseForecastResponse } from './forecast';
 import { makeForecastResponse } from './fixtures/forecast';
 import { requestedUrl, stubFetchJson, stubHangingFetch } from './testHelpers';
 
 const uppsala = { latitude: 59.85882, longitude: 17.63889 };
 
+beforeEach(() => {
+  // Rejected responses are logged; keep the test output clean.
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 function withChange(change: (response: Record<string, unknown>) => void): unknown {
@@ -193,6 +199,18 @@ describe('parseForecastResponse', () => {
       (r.current as Record<string, unknown>).time = '2026-10-19T22:15:00Z';
     });
     expect(parseForecastResponse(response)).toEqual(invalid);
+  });
+
+  it('logs which part of the forecast was wrong', () => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const response = withChange((r) => {
+      (r.hourly_units as Record<string, unknown>).wind_speed_10m = 'km/h';
+    });
+    parseForecastResponse(response);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      expect.stringContaining('unexpected units'),
+      expect.anything(),
+    );
   });
 
   it.each([null, 'text', {}])('rejects %j', (body) => {
