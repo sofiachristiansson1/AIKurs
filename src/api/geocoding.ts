@@ -1,10 +1,19 @@
 import type { Location } from '../domain/types';
 import { getJson, type RequestOptions } from './http';
 import { err, ok, type ApiError, type Result } from './result';
-import { asArray, asFiniteNumber, asNonEmptyString, isRecord } from './validation';
+import {
+  asArray,
+  asFiniteNumber,
+  asLatitude,
+  asLongitude,
+  asPlaceText,
+  isRecord,
+} from './validation';
 
 const GEOCODING_URL = 'https://geocoding-api.open-meteo.com/v1/search';
 const MIN_QUERY_LENGTH = 2;
+/** Longer than any Swedish place name, short enough to keep the request URL small. */
+export const MAX_QUERY_LENGTH = 100;
 const MAX_RESULTS = 10;
 /** Searches are limited to Sweden for now. */
 const COUNTRY_CODE = 'SE';
@@ -16,6 +25,9 @@ export async function searchLocations(
   const name = query.trim();
   if (name.length < MIN_QUERY_LENGTH) {
     return err({ kind: 'emptyQuery' });
+  }
+  if (name.length > MAX_QUERY_LENGTH) {
+    return err({ kind: 'queryTooLong' });
   }
   const response = await getJson(buildSearchUrl(name), options);
   return response.ok ? parseSearchResponse(response.value) : response;
@@ -58,10 +70,10 @@ export function toLocation(value: unknown): Location | undefined {
     return undefined;
   }
   const id = asFiniteNumber(value.id);
-  const name = asNonEmptyString(value.name);
-  const country = asNonEmptyString(value.country);
-  const latitude = asFiniteNumber(value.latitude);
-  const longitude = asFiniteNumber(value.longitude);
+  const name = asPlaceText(value.name);
+  const country = asPlaceText(value.country);
+  const latitude = asLatitude(value.latitude);
+  const longitude = asLongitude(value.longitude);
   if (
     id === undefined ||
     name === undefined ||
@@ -71,6 +83,6 @@ export function toLocation(value: unknown): Location | undefined {
   ) {
     return undefined;
   }
-  const region = asNonEmptyString(value.admin1);
+  const region = asPlaceText(value.admin1);
   return { id, name, country, latitude, longitude, ...(region === undefined ? {} : { region }) };
 }

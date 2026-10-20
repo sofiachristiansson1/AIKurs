@@ -1,3 +1,4 @@
+import { isValidAge } from '../domain/horseAge';
 import { BREED_TYPES, HOUSINGS, type HorseProfile } from '../domain/types';
 import { asBoolean, asFiniteNumber, asOneOf, isRecord } from './validation';
 import { createJsonStore, type JsonStore, type KeyValueStorage } from './webStorage';
@@ -21,8 +22,7 @@ export function parseHorseProfile(value: unknown): HorseProfile | undefined {
     clipped === undefined ||
     breedType === undefined ||
     housing === undefined ||
-    ageYears === undefined ||
-    ageYears < 0
+    !isValidAge(ageYears)
   ) {
     return undefined;
   }

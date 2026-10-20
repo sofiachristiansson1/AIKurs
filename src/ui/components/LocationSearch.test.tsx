@@ -44,4 +44,9 @@ describe('LocationSearch', () => {
     expect((await screen.findByRole('alert')).textContent).toBe('Skriv minst två bokstäver.');
     expect(fetchMock).not.toHaveBeenCalled();
   });
+
+  it('limits the search field to 100 characters', () => {
+    renderSearch();
+    expect(screen.getByLabelText('Sök ort i Sverige').getAttribute('maxlength')).toBe('100');
+  });
 });
