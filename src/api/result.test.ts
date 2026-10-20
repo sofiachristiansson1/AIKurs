@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { catchUnexpected, ok, reportUnexpected } from './result';
+import { catchUnexpected, ok, rejectResponse, reportUnexpected } from './result';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -11,6 +11,15 @@ describe('reportUnexpected', () => {
     const cause = new Error('bug');
     expect(reportUnexpected(cause)).toEqual({ kind: 'unexpected' });
     expect(consoleError).toHaveBeenCalledWith(expect.any(String), cause);
+  });
+});
+
+describe('rejectResponse', () => {
+  it('logs what was wrong and returns invalidResponse', () => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const data = { units: 'km/h' };
+    expect(rejectResponse('unexpected units', data)).toEqual({ kind: 'invalidResponse' });
+    expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining('unexpected units'), data);
   });
 });
 

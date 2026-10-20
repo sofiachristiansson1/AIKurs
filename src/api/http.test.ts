@@ -1,8 +1,14 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getJson } from './http';
 import { jsonResponse, stubFetch, stubFetchJson, stubHangingFetch } from './testHelpers';
 
 const url = new URL('https://example.test/data');
+
+let consoleWarn: ReturnType<typeof vi.spyOn>;
+
+beforeEach(() => {
+  consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+});
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -46,6 +52,15 @@ describe('getJson', () => {
     });
   });
 
+  it('logs the reason Open-Meteo gives, since users never see it', async () => {
+    stubFetchJson({ error: true, reason: 'Latitude must be in range of -90 to 90°.' }, 400);
+    await getJson(url);
+    expect(consoleWarn).toHaveBeenCalledWith(
+      expect.stringContaining('400'),
+      'Latitude must be in range of -90 to 90°.',
+    );
+  });
+
   it('returns serviceError without reason for a non-JSON error page', async () => {
     stubFetch(() => Promise.resolve(new Response('<html>Bad gateway</html>', { status: 502 })));
     expect(await getJson(url)).toEqual({
@@ -57,6 +72,7 @@ describe('getJson', () => {
   it('returns invalidResponse when a successful response is not JSON', async () => {
     stubFetch(() => Promise.resolve(new Response('not json', { status: 200 })));
     expect(await getJson(url)).toEqual({ ok: false, error: { kind: 'invalidResponse' } });
+    expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining('not JSON'), undefined);
   });
 
   it('returns a network error when the request fails', async () => {

@@ -30,6 +30,15 @@ export function reportUnexpected(cause: unknown): ApiError {
 }
 
 /**
+ * Logs why a response from the outside world was rejected and wraps it as invalidResponse.
+ * Users get a general message; the log tells developers what was actually wrong.
+ */
+export function rejectResponse(detail: string, data?: unknown): ApiError {
+  console.warn(`Täckesguiden: invalid response: ${detail}`, data);
+  return { kind: 'invalidResponse' };
+}
+
+/**
  * Turns a rejected promise into an `unexpected` error. Use it where the UI starts a request,
  * so a bug shows a message instead of leaving the page loading forever.
  */

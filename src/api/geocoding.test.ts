@@ -1,10 +1,16 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { noMatchSearchResponse, uppsalaSearchResponse } from './fixtures/geocoding';
 import { searchLocations, toLocation } from './geocoding';
 import { requestedUrl, stubFetch, stubFetchJson } from './testHelpers';
 
+beforeEach(() => {
+  // Rejected responses are logged; keep the test output clean.
+  vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('searchLocations', () => {
@@ -125,6 +131,13 @@ describe('searchLocations', () => {
       ok: false,
       error: { kind: 'invalidResponse' },
     });
+  });
+
+  it('logs why a search response was rejected', async () => {
+    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    stubFetchJson({ results: 'Lund' });
+    await searchLocations('Lund');
+    expect(consoleWarn).toHaveBeenCalledWith(expect.stringContaining('not a list'), 'Lund');
   });
 
   it('passes on network errors', async () => {

@@ -1,4 +1,4 @@
-import { err, ok, reportUnexpected, type ApiError, type Result } from './result';
+import { err, ok, rejectResponse, reportUnexpected, type ApiError, type Result } from './result';
 import { asNonEmptyString, isRecord } from './validation';
 
 export const REQUEST_TIMEOUT_MS = 10_000;
@@ -19,9 +19,14 @@ export async function getJson(
     const response = await fetch(url, { signal: request.signal });
     const body = await readJsonBody(response);
     if (!response.ok) {
-      return err({ kind: 'serviceError', status: response.status, reason: readReason(body) });
+      const reason = readReason(body);
+      // The reason is in English and meant for developers, so it is logged, not shown.
+      console.warn(`Täckesguiden: ${url.host} answered ${String(response.status)}`, reason);
+      return err({ kind: 'serviceError', status: response.status, reason });
     }
-    return body === undefined ? err({ kind: 'invalidResponse' }) : ok(body);
+    return body === undefined
+      ? err(rejectResponse(`${url.host} sent a body that is not JSON`))
+      : ok(body);
   } catch (error) {
     return err(classifyFailure(error, request.hasTimedOut(), options.signal));
   } finally {

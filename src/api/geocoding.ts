@@ -1,6 +1,6 @@
 import type { Location } from '../domain/types';
 import { getJson, type RequestOptions } from './http';
-import { err, ok, type ApiError, type Result } from './result';
+import { err, ok, rejectResponse, type ApiError, type Result } from './result';
 import {
   asArray,
   asFiniteNumber,
@@ -48,20 +48,23 @@ export function buildSearchUrl(name: string): URL {
 /** Open-Meteo leaves out "results" entirely when nothing matches. */
 export function parseSearchResponse(body: unknown): Result<Location[], ApiError> {
   if (!isRecord(body)) {
-    return err({ kind: 'invalidResponse' });
+    return err(rejectResponse('search result is not an object', body));
   }
   if (body.results === undefined) {
     return err({ kind: 'locationNotFound' });
   }
   const results = asArray(body.results);
   if (results === undefined) {
-    return err({ kind: 'invalidResponse' });
+    return err(rejectResponse('search results are not a list', body.results));
   }
   const locations = results.map(toLocation).filter((location) => location !== undefined);
   if (locations.length > 0) {
     return ok(locations);
   }
-  return err({ kind: results.length === 0 ? 'locationNotFound' : 'invalidResponse' });
+  if (results.length === 0) {
+    return err({ kind: 'locationNotFound' });
+  }
+  return err(rejectResponse('no search result has the required fields', results));
 }
 
 /** Maps one geocoding result, or undefined if a required field is missing. */
