@@ -9,6 +9,25 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+/** Removes AbortSignal.any and AbortSignal.timeout while `run` runs, like Safari before 17.4. */
+async function withoutModernAbortSignal(run: () => Promise<void>): Promise<void> {
+  const names = ['any', 'timeout'] as const;
+  const originals = names.map((name) => Object.getOwnPropertyDescriptor(AbortSignal, name));
+  for (const name of names) {
+    Object.defineProperty(AbortSignal, name, { value: undefined, configurable: true });
+  }
+  try {
+    await run();
+  } finally {
+    names.forEach((name, index) => {
+      const original = originals[index];
+      if (original !== undefined) {
+        Object.defineProperty(AbortSignal, name, original);
+      }
+    });
+  }
+}
+
 describe('getJson', () => {
   it('returns the parsed body on success', async () => {
     stubFetchJson({ value: 1 });
@@ -75,5 +94,35 @@ describe('getJson', () => {
     const fetchMock = stubFetch(() => Promise.resolve(jsonResponse({})));
     await getJson(url);
     expect(fetchMock).toHaveBeenCalledWith(url, { signal: expect.any(AbortSignal) as unknown });
+  });
+
+  it('works in browsers without AbortSignal.any and AbortSignal.timeout', async () => {
+    stubFetchJson({ value: 1 });
+    await withoutModernAbortSignal(async () => {
+      expect(await getJson(url, { signal: new AbortController().signal })).toEqual({
+        ok: true,
+        value: { value: 1 },
+      });
+    });
+  });
+
+  it('still times out in browsers without AbortSignal.any and AbortSignal.timeout', async () => {
+    stubHangingFetch();
+    await withoutModernAbortSignal(async () => {
+      expect(await getJson(url, { timeoutMs: 5 })).toEqual({
+        ok: false,
+        error: { kind: 'network', timedOut: true },
+      });
+    });
+  });
+
+  it('returns aborted when the caller cancelled before the request started', async () => {
+    stubHangingFetch();
+    const controller = new AbortController();
+    controller.abort();
+    expect(await getJson(url, { signal: controller.signal })).toEqual({
+      ok: false,
+      error: { kind: 'aborted' },
+    });
   });
 });
