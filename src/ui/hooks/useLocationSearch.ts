@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { searchLocations } from '../../api/geocoding';
-import type { ApiError } from '../../api/result';
+import { catchUnexpected, type ApiError } from '../../api/result';
 import type { Location } from '../../domain/types';
 
 export type LocationSearchState =
@@ -11,7 +11,8 @@ export type LocationSearchState =
 
 /**
  * Searches when asked to. A single match is selected straight away; several are offered as a
- * list. A new search cancels one that is still running.
+ * list. A new search cancels one that is still running. Failures, even unexpected ones, end up
+ * in the error state, so the returned promise does not reject because of the request.
  */
 export function useLocationSearch(onSelect: (location: Location) => void) {
   const [state, setState] = useState<LocationSearchState>({ status: 'idle' });
@@ -25,7 +26,7 @@ export function useLocationSearch(onSelect: (location: Location) => void) {
       const controller = new AbortController();
       controllerRef.current = controller;
       setState({ status: 'searching', query });
-      const result = await searchLocations(query, { signal: controller.signal });
+      const result = await catchUnexpected(searchLocations(query, { signal: controller.signal }));
       if (controller.signal.aborted) {
         return;
       }

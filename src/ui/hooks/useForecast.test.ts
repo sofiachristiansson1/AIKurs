@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fetchForecast } from '../../api/forecast';
 import { makeForecastResponse } from '../../api/fixtures/forecast';
 import { jsonResponse, stubFetch, stubFetchJson } from '../../api/testHelpers';
 import type { Location } from '../../domain/types';
 import { useForecast } from './useForecast';
+
+vi.mock('../../api/forecast', { spy: true });
 
 const uppsala: Location = {
   id: 2666199,
@@ -17,6 +20,7 @@ const uppsala: Location = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('useForecast', () => {
@@ -52,6 +56,15 @@ describe('useForecast', () => {
     expect(result.current.state.status).toBe('loading');
     await waitFor(() => {
       expect(result.current.state.status).toBe('ready');
+    });
+  });
+
+  it('shows an error instead of loading forever when fetching throws unexpectedly', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    vi.mocked(fetchForecast).mockRejectedValueOnce(new Error('bug in parsing'));
+    const { result } = renderHook(() => useForecast(uppsala));
+    await waitFor(() => {
+      expect(result.current.state).toEqual({ status: 'error', error: { kind: 'unexpected' } });
     });
   });
 });

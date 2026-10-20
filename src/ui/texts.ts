@@ -91,6 +91,8 @@ export function errorMessage(error: ApiError, query = ''): string | undefined {
       return 'Vädertjänsten skickade data som appen inte förstår.';
     case 'storageUnavailable':
       return 'Webbläsaren tillåter inte att appen sparar dina uppgifter. Appen fungerar, men du behöver fylla i dem igen nästa gång.';
+    case 'unexpected':
+      return 'Något gick fel i appen. Ladda om sidan och försök igen.';
     case 'aborted':
       return undefined;
   }

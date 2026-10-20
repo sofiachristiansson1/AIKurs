@@ -43,6 +43,8 @@ export default defineConfig([
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
+      // A new ApiError kind without a message would otherwise show nothing (principle 8).
+      '@typescript-eslint/switch-exhaustiveness-check': 'error',
     },
   },
   {
